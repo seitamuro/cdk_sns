@@ -22,9 +22,29 @@ export class CdkSnsStack extends cdk.Stack {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
     });
 
-    const lambda_function = new lambda_nodejs.NodejsFunction(
+    const consumer_function = new lambda_nodejs.NodejsFunction(
       this,
-      "lambda_function",
+      "all_function",
+      {
+        runtime: lambda.Runtime.NODEJS_20_X,
+        handler: "handler",
+        entry: "function/consumer.ts",
+        role: lambda_role,
+      }
+    );
+    const apple_function = new lambda_nodejs.NodejsFunction(
+      this,
+      "apple_function",
+      {
+        runtime: lambda.Runtime.NODEJS_20_X,
+        handler: "handler",
+        entry: "function/consumer.ts",
+        role: lambda_role,
+      }
+    );
+    const orange_function = new lambda_nodejs.NodejsFunction(
+      this,
+      "orange_function",
       {
         runtime: lambda.Runtime.NODEJS_20_X,
         handler: "handler",
@@ -39,12 +59,37 @@ export class CdkSnsStack extends cdk.Stack {
     });
 
     const sample_sqs = new sqs.Queue(this, "sample_sqs", {});
+    const apple_sqs = new sqs.Queue(this, "apple_sqs", {});
+    const orange_sqs = new sqs.Queue(this, "orange_sqs", {});
 
+    sns_topic.addSubscription(new subscriptions.SqsSubscription(sample_sqs));
     sns_topic.addSubscription(
-      new subscriptions.SqsSubscription(sample_sqs, {})
+      new subscriptions.SqsSubscription(apple_sqs, {
+        filterPolicy: {
+          fruit: sns.SubscriptionFilter.stringFilter({
+            allowlist: ["apple"],
+          }),
+        },
+      })
     );
-    lambda_function.addEventSource(
+    sns_topic.addSubscription(
+      new subscriptions.SqsSubscription(orange_sqs, {
+        filterPolicy: {
+          fruit: sns.SubscriptionFilter.stringFilter({
+            allowlist: ["orange"],
+          }),
+        },
+      })
+    );
+
+    consumer_function.addEventSource(
       new lambda_event_sources.SqsEventSource(sample_sqs)
+    );
+    apple_function.addEventSource(
+      new lambda_event_sources.SqsEventSource(apple_sqs)
+    );
+    orange_function.addEventSource(
+      new lambda_event_sources.SqsEventSource(orange_sqs)
     );
   }
 }

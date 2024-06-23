@@ -1,12 +1,10 @@
 export const handler = async function (event: any) {
   let body = null;
-  console.log("Event: ");
-  console.log(event);
   event.Records.forEach((record: any) => {
-    body = record;
+    const body = JSON.parse(record.body);
+    console.log(`Subject: ${body.Subject}`);
+    console.log(`Message: ${body.Message}`);
   });
-  console.log("Body: ");
-  console.log(body);
   const response = {
     statusCode: 200,
     body: JSON.stringify(body),
